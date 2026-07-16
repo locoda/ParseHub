@@ -1,6 +1,5 @@
-from ...provider_api.threads import ThreadsAPI, ThreadsMedia, ThreadsMediaType, ThreadsPost
+from ...provider_api.threads import ThreadsAPI, ThreadsAPIError, ThreadsMedia, ThreadsMediaType, ThreadsPost
 from ...types import AnyMediaRef, ImageRef, MultimediaParseResult, ParseError, Platform, VideoRef
-from ...utils.helpers import SecretCookie
 from ..base.base import BaseParser
 
 
@@ -22,15 +21,19 @@ class ThreadsParser(BaseParser):
                         media.append(ImageRef(url=m.url, thumb_url=m.url, width=m.width, height=m.height))
         return MultimediaParseResult(content=post.content, media=media)
 
-    async def _parse(self, url: str, cookie: SecretCookie | None = None) -> ThreadsPost:
+    async def _parse(self, url: str) -> ThreadsPost:
+        # Threads 现在需要登录态才能获取帖子, 因此始终带上已配置的 Cookie
         try:
-            api = ThreadsAPI(proxy=self.proxy, cookie=cookie.get_value() if cookie else None)
+            api = ThreadsAPI(proxy=self.proxy, cookie=self.cookie.get_value() if self.cookie else None)
             return await api.parse(url)
+        except ThreadsAPIError as e:
+            if not self.cookie:
+                raise ParseError("无法获取帖子内容: Threads 需要登录, 请为 threads 平台配置 Cookie") from e
+            raise ParseError("无法获取帖子内容(可能为私人或受限内容, 或 Cookie 已失效)") from e
+        except ParseError:
+            raise
         except Exception as e:
-            # 未登录时对私密/受限内容会失败, 若已配置 Cookie 则带上 Cookie 重试一次
-            if self.cookie and cookie is None:
-                return await self._parse(url, self.cookie)
-            raise ParseError("无法获取帖子内容(可能为私人或受限内容)") from e
+            raise ParseError(f"无法获取帖子内容: {e}") from e
 
 
 __all__ = ["ThreadsParser"]
