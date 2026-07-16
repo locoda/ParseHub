@@ -22,13 +22,13 @@ class ThreadsParser(BaseParser):
         return MultimediaParseResult(content=post.content, media=media)
 
     async def _parse(self, url: str) -> ThreadsPost:
-        # Threads 现在需要登录态才能获取帖子, 因此始终带上已配置的 Cookie
+        # 公开帖子无需登录即可解析; 登录墙内容 (私密/受限/年龄限制) 才需要 Cookie, 有则带上
         try:
             api = ThreadsAPI(proxy=self.proxy, cookie=self.cookie.get_value() if self.cookie else None)
             return await api.parse(url)
         except ThreadsAPIError as e:
             if not self.cookie:
-                raise ParseError("无法获取帖子内容: Threads 需要登录, 请为 threads 平台配置 Cookie") from e
+                raise ParseError("无法获取帖子内容: 该帖子可能位于登录墙内, 请为 threads 平台配置 Cookie") from e
             raise ParseError("无法获取帖子内容(可能为私人或受限内容, 或 Cookie 已失效)") from e
         except ParseError:
             raise
