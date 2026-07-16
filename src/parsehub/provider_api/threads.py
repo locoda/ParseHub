@@ -33,7 +33,8 @@ class ThreadsAPI:
         "ig_did": "",
     }
 
-    # GraphQL 查询所需的 relay provider 变量 (全部传 False 即可).
+    # GraphQL 查询强制要求的 relay provider 变量: 必须全部传入 (值统一给 False 即可),
+    # 缺失或只传部分都会导致查询返回 execution error.
     # 与 Instagram 的 doc_id 一样, 该列表会随 Threads 前端更新而变化, 需要时同步维护.
     RELAY_PROVIDERS = (
         "BarcelonaHasPermalinkIndentation",
