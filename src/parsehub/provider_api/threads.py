@@ -13,29 +13,44 @@ from ..utils.helpers import UA
 
 
 class ThreadsAPI:
-    def __init__(self, proxy: str | None = None):
+    # Threads 与 Instagram 共用 Meta 的登录后端, 因此使用同一套 Cookie 键
+    DEFAULT_COOKIES = {
+        "sessionid": "",
+        "ds_user_id": "",
+        "csrftoken": "",
+        "mid": "",
+        "ig_did": "",
+    }
+
+    def __init__(self, proxy: str | None = None, cookie: dict[str, str] | None = None):
         self.proxy = proxy
+        self.cookie = cookie or {}
 
     async def parse(self, url: str) -> ThreadsPost:
         lsd = self.random_lsd()
+        cookies = self.DEFAULT_COOKIES | self.cookie
+        # 已登录时 __user 需为登录用户的数字 ID(ds_user_id), 未登录时为 "0"
+        user_id = cookies.get("ds_user_id") or "0"
         headers = {
             "content-type": "application/x-www-form-urlencoded",
             "sec-fetch-site": "same-origin",
             "user-agent": UA,
             "x-fb-lsd": lsd,
         }
+        if csrftoken := cookies.get("csrftoken"):
+            headers["x-csrftoken"] = csrftoken
 
         data = {
             "route_url": f"/{self.get_username_by_url(url)}/post/{self.get_post_id_by_url(url)}/media",
             "routing_namespace": "barcelona_web",
-            "__user": "0",
+            "__user": user_id,
             "__a": "1",
             "__req": "m",
             "__comet_req": "29",
             "lsd": lsd,
         }
 
-        async with httpx.AsyncClient(proxy=self.proxy) as client:
+        async with httpx.AsyncClient(proxy=self.proxy, cookies=cookies) as client:
             response = await client.post("https://www.threads.com/ajax/route-definition", headers=headers, data=data)
             response.raise_for_status()
             jsonp = [json.loads(j.strip()) for j in response.text.strip().split("for (;;);") if j]
