@@ -163,7 +163,7 @@ print(result)
 
 - `Twitter / X`
 - `Instagram`
-- `Threads`（现已强制需要登录，必须配置 Cookie 才能解析）
+- `Threads`（公开帖子无需登录即可解析；私密/受限/年龄限制等登录墙内容需配置 Cookie）
 - `YouTube`
 - `Bilibili`
 - `抖音`
